@@ -13,7 +13,7 @@ const pool = new Pool({
     host: 'localhost',
     database: 'users',
     password: 'bazepodataka',
-    port: 5433, // PostgreSQL default port
+    port: 5433,
 });
 const crypto = require('crypto');
 const secretKey = crypto.randomBytes(32).toString('hex');
@@ -68,7 +68,7 @@ app.get('/', (req, res) => {
 
     const isVulnerable = req.query.isVulnerable === 'true';
     const poruka = req.session.error;
-        const poruka2 = req.session.error2;
+    const poruka2 = req.session.error2;
 
     pool.query('SELECT ime, komentar FROM komentari;', (err, result) => {
         if (err) {
@@ -174,32 +174,28 @@ app.post('/brokenauth', (req, res) => {
 });
 
 
-const maxLoginAttempts = 3; // Maximum allowed login attempts
-const blockDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
+const maxLoginAttempts = 3;
+const blockDuration = 5 * 60 * 1000;
 
 app.post('/auth', (req, res) => {
     const username = req.body.username;
     const password = req.body.password;
 
-    // Initialize login attempts and last failed attempt time
     if (!req.session.loginAttempts) {
         req.session.loginAttempts = 0;
         req.session.lastFailedAttemptTime = null;
     }
 
-    // Check if login attempts are blocked
     if (
         req.session.loginAttempts >= maxLoginAttempts &&
         req.session.lastFailedAttemptTime &&
         Date.now() - req.session.lastFailedAttemptTime < blockDuration
     ) {
-        // Block login attempts
         const timeLeft = blockDuration - (Date.now() - req.session.lastFailedAttemptTime);
         req.session.error2 = `Login attempts are blocked. Try again in ${timeLeft / 1000} seconds.`;
         return res.redirect("/");
     }
 
-    // Attempt to authenticate the user
     pool.query('SELECT ime, prezime FROM users WHERE username = $1 AND password = $2', [username, password], (err, result) => {
         if (err) {
             console.error('Error querying the database:', err);
@@ -207,12 +203,10 @@ app.post('/auth', (req, res) => {
         }
 
         if (result.rows.length > 0) {
-            // Successful login
-            req.session.loginAttempts = 0; // Reset login attempts
+            req.session.loginAttempts = 0;
             req.session.lastFailedAttemptTime = null;
             return res.redirect('/');
         } else {
-            // Failed login attempt
             req.session.loginAttempts++;
             req.session.lastFailedAttemptTime = Date.now();
             req.session.error2 = 'Invalid username or password';
