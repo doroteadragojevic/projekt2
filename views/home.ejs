@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome</title>
+</head>
+<body>
+    <h1>Hi there</h1>
+
+    <button onclick="redirectToLogin()">Login</button>
+
+    <!-- Dodajte div za prikazivanje imena i prezimena -->
+        <div id="userInfo">
+  <% if (session && session.ime && session.prezime) { %>
+    Dobrodošli, <%= session.ime %> <%= session.prezime %>
+  <% } %>
+</div>
+
+<form action="/xss" method="POST">
+        <label for="username">Dodaj u listu:</label>
+        <input type="text" id="lista" name="lista" required><br>
+
+        <button type="submit">Dodaj</button>
+    </form>
+
+    <div id="resultVariableList">
+    <% if (lista && lista.length > 0) { %>
+        <ul>
+            <% lista.forEach(item => { %>
+                <li>
+                    <div><%- item %></div>
+                </li>
+            <% }); %>
+        </ul>
+    <% } %>
+</div>
+<!--
+<button onclick="redirectToXSS()">Try XXS</button>
+-->
+</body>
+<script>
+    function redirectToLogin() {
+        var currentPath = window.location.pathname;
+
+        if (currentPath.endsWith('/')) {
+            currentPath = currentPath.slice(0, -1);
+        }
+
+        var loginUrl = currentPath + "/login";
+
+        window.location.href = loginUrl;
+    }
+
+    function redirectToXSS() {
+    window.location.href = "/xss";
+}
+
+</script>
+</html>

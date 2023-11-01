@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    <div>
+    <p>XSS Example: </p>
+    <textarea id="variable" name="variable" rows="4" cols="50"></textarea><br>
+    <button onclick="addCustomElement()">Add Element</button>
+
+    <h1>Results of your search query: </h1>
+    <div id="resultVariableList"></div>
+</div>
+    
+</body>
+
+<script>
+    function addCustomElement() {
+    // Dobijte vrijednost iz textarea polja
+    var userInput = document.getElementById('variable').value;
+
+    // Dohvatite kontejner u koji ćete dodati korisnički unos
+    var resultContainer = document.getElementById('resultVariableList');
+
+    // Kreirajte novi div element s korisničkim unosom kao HTML sadržaj
+    var customElement = document.createElement('div');
+    customElement.innerHTML = userInput;
+
+    // Dodajte novi div element u kontejner
+    resultContainer.appendChild(customElement);
+}
+</script>
+</html>
