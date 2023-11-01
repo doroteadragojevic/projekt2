@@ -1,13 +1,12 @@
 const express = require('express');
-const { readFile } = require('fs');
+const {
+    readFile
+} = require('fs');
 const {
     Pool
-} = require('pg'); 
+} = require('pg');
 const session = require('express-session');
 const bodyParser = require('body-parser');
-
-
-
 
 const pool = new Pool({
     user: 'postgres',
@@ -16,29 +15,62 @@ const pool = new Pool({
     password: 'bazepodataka',
     port: 5433, // PostgreSQL default port
 });
-
-
-const app = express();
-app.set('view engine', 'ejs');
-
 const crypto = require('crypto');
 const secretKey = crypto.randomBytes(32).toString('hex');
 
-
+const app = express();
+app.set('view engine', 'ejs');
 app.use(session({
-    secret: secretKey, 
+    secret: secretKey,
     resave: true,
     saveUninitialized: true
 }));
-
 app.use(bodyParser.urlencoded({
     extended: true
 }));
+app.use(express.static('public', {
+    'extensions': ['css']
+}));
+app.use(express.static("public"));
+
+
+
+app.get('/initialize', (req, res) => {
+    pool.query('SELECT ime, prezime FROM users WHERE username = $1 AND password = $2', ['test123', '12345678'], (err, result) => {
+        if (err) {
+            console.error('Error querying the database:', err);
+            res.status(500).send('Database error');
+            return;
+        }
+
+        if (result.rows.length > 0) {
+            req.session.ime = result.rows[0].ime;
+            req.session.prezime = result.rows[0].prezime;
+            res.status(200).send('Vec postoji')
+        } else {
+            pool.query('INSERT INTO users(id, ime, password, prezime, username) VALUES( $1 , $2 , $3, $4 , $5 );', ['1 ', 'Pero', '12345678', 'Peric', 'test123'], (err, result) => {
+                if (err) {
+                    console.error('Error querying the database:', err);
+                    res.status(500).send('Database error');
+                    return;
+                } else {
+                    res.status(200).send('Uspjesno inicijalizirano')
+
+                }
+            });
+        }
+    });
+})
 
 
 
 app.get('/', (req, res) => {
-    pool.query('SELECT content FROM content;', (err, result) => {
+
+    const isVulnerable = req.query.isVulnerable === 'true';
+    const poruka = req.session.error;
+        const poruka2 = req.session.error2;
+
+    pool.query('SELECT ime, komentar FROM komentari;', (err, result) => {
         if (err) {
             console.error('Error querying the database:', err);
             res.status(500).send('Database error');
@@ -46,30 +78,27 @@ app.get('/', (req, res) => {
         }
 
         const rows = result.rows;
-        const contentList = rows.map(row => row.content);
+        const contentList = rows.map(row => ({
+            ime: row.ime,
+            komentar: row.komentar
+        }));
 
         res.render('home', {
             session: req.session,
-            lista: contentList, // Dodajte listu pod ključem "lista"
+            lista: contentList,
+            isVulnerable: isVulnerable || false,
+            poruka: poruka,
+            poruka2: poruka2
         });
     });
 });
 
 app.get('/login', (req, res) => {
 
-    readFile('./login.html', 'utf-8', (err, html) => {
-        res.send(html);
-    })
+    res.render('login');
 
 })
 
-app.get('/xss', (req, res) => {
-
-    readFile('./xss.html', 'utf-8', (err, html) => {
-        res.send(html);
-    })
-
-})
 
 app.post('/login', (req, res) => {
     const username = req.body.username;
@@ -83,14 +112,10 @@ app.post('/login', (req, res) => {
         }
 
         if (result.rows.length > 0) {
-            // Ako su korisničko ime i lozinka tačni, postavite ime i prezime u sesiju
             req.session.ime = result.rows[0].ime;
             req.session.prezime = result.rows[0].prezime;
-            console.log(req.session.ime);
-            // Preusmerite korisnika na željenu stranicu nakon prijave
             res.redirect('/');
         } else {
-            // Ako su korisničko ime i lozinka netačni, prikažite poruku o grešci
             res.status(401).send('Invalid username or password');
         }
     });
@@ -98,8 +123,12 @@ app.post('/login', (req, res) => {
 
 app.post('/xss', (req, res) => {
     const lista = req.body.lista;
+    const ime = req.session.ime || 'Anonymous';
+    console.log(req.body.isVulnerable);
+    const isVulnerable = req.body.isVulnerable;
 
-    pool.query('INSERT INTO content( content) VALUES( $1);', [lista], (err, result) => {
+
+    pool.query('INSERT INTO komentari(ime, komentar) VALUES( $1, $2);', [ime, lista], (err, result) => {
         if (err) {
             console.error('Error querying the database:', err);
             res.status(500).send('Database error');
@@ -107,11 +136,92 @@ app.post('/xss', (req, res) => {
         }
     });
 
+    const putanja = `/?isVulnerable=${isVulnerable}`
+    res.redirect(putanja);
 
-        // Pošaljite generirani HTML na stranicu "home"
-                    res.redirect('/');
 
-    
 });
+
+app.post('/brokenauth', (req, res) => {
+    const username = req.body.username;
+    const password = req.body.password;
+
+    pool.query('SELECT * FROM users WHERE username = $1', [username], (err, result) => {
+        if (err) {
+            console.error('Error querying the database:', err);
+            return res.status(500).send('Database error');
+        }
+
+        if (result.rows.length <= 0) {
+            req.session.error = `Username ${username} ne postoji.`;
+            return res.redirect("/");
+        }
+
+        pool.query('SELECT ime, prezime FROM users WHERE username = $1 AND password = $2', [username, password], (err, result) => {
+            if (err) {
+                console.error('Error querying the database:', err);
+                return res.status(500).send('Database error');
+            }
+
+            if (result.rows.length > 0) {
+                return res.redirect('/');
+            } else {
+                req.session.error = "Neispravna lozinka.";
+                return res.redirect("/");
+            }
+        });
+    });
+});
+
+
+const maxLoginAttempts = 3; // Maximum allowed login attempts
+const blockDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+app.post('/auth', (req, res) => {
+    const username = req.body.username;
+    const password = req.body.password;
+
+    // Initialize login attempts and last failed attempt time
+    if (!req.session.loginAttempts) {
+        req.session.loginAttempts = 0;
+        req.session.lastFailedAttemptTime = null;
+    }
+
+    // Check if login attempts are blocked
+    if (
+        req.session.loginAttempts >= maxLoginAttempts &&
+        req.session.lastFailedAttemptTime &&
+        Date.now() - req.session.lastFailedAttemptTime < blockDuration
+    ) {
+        // Block login attempts
+        const timeLeft = blockDuration - (Date.now() - req.session.lastFailedAttemptTime);
+        req.session.error2 = `Login attempts are blocked. Try again in ${timeLeft / 1000} seconds.`;
+        return res.redirect("/");
+    }
+
+    // Attempt to authenticate the user
+    pool.query('SELECT ime, prezime FROM users WHERE username = $1 AND password = $2', [username, password], (err, result) => {
+        if (err) {
+            console.error('Error querying the database:', err);
+            return res.status(500).send('Database error');
+        }
+
+        if (result.rows.length > 0) {
+            // Successful login
+            req.session.loginAttempts = 0; // Reset login attempts
+            req.session.lastFailedAttemptTime = null;
+            return res.redirect('/');
+        } else {
+            // Failed login attempt
+            req.session.loginAttempts++;
+            req.session.lastFailedAttemptTime = Date.now();
+            req.session.error2 = 'Invalid username or password';
+            return res.redirect("/");
+        }
+    });
+});
+
+
+
 
 app.listen(process.env.PORT || 3000)

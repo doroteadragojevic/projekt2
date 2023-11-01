@@ -1,0 +1,73 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+}
+
+#userInfo {
+    font-size: 18px;
+    margin-top: 20px;
+}
+
+hr {
+    border: 1px solid #ddd;
+}
+
+ul {
+    list-style-type: none;
+}
+
+ul li {
+    margin-bottom: 20px;
+}
+
+input[type="checkbox"] {
+    margin-right: 5px;
+}
+
+label {
+    font-size: 16px;
+}
+
+form {
+    margin-top: 20px;
+}
+
+input[type="text"] {
+    padding: 5px; /* You can adjust the padding as needed */
+    width: 10%; /* Adjust the width as needed; this sets it to 50% of the parent element's width */
+}
+
+button[type="submit"] {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+}
+
+#komentariList {
+    margin-top: 20px;
+}
+
+#komentariList ul li {
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+
+textarea {
+    padding: 5px;
+    width: 60%; /* You can adjust the width as needed; this sets it to 100% of the parent element's width */
+    height: 100px; /* You can adjust the height as needed */
+        margin-left: 2; /* Add this line to align it to the left edge */
+
+}
