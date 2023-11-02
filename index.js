@@ -1,4 +1,5 @@
 const express = require('express');
+require('dotenv').config();
 const {
     readFile
 } = require('fs');
@@ -8,12 +9,14 @@ const {
 const session = require('express-session');
 const bodyParser = require('body-parser');
 
+
 const pool = new Pool({
-    user: 'postgres',
-    host: 'localhost',
-    database: 'users',
-    password: 'bazepodataka',
-    port: 5433,
+    user: process.env.DB_USER,
+    host: process.env.DB_HOST,
+    database: 'natjecanja_2sc6',
+    password: process.env.DB_PASSWORD,
+    port: 5432,
+    ssl: true
 });
 const crypto = require('crypto');
 const secretKey = crypto.randomBytes(32).toString('hex');
